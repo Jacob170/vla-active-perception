@@ -25,3 +25,13 @@ tensorflow, tensorflow_datasets, tensorflow_graphics, dlimp, torchaudio
 - NEVER pip install in (base) → fills container overlay → container dies
 - git needs LD_LIBRARY_PATH= prefix (conda OpenSSL breaks ssh)
 - cmake must be <4 (egl_probe uses cmake_minimum_required <3.5)
+
+## G1 PASSED 2026-07-13
+mujoco 2.3.7   (NOT 3.x — robosuite 1.4.0's mj_fullM signature)
+libero via plain .pth (editable install hooks broken)
+smoke test: 200 frames, agentview_image (256,256,3)
+
+## obs keys that matter
+agentview_image           → OpenVLA input
+robot0_eye_in_hand_image  → wrist cam
+robot0_eef_pos/_quat      → EE pose, free FK for semantic entropy
