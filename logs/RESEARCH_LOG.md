@@ -88,3 +88,10 @@ task 9: 38/50
 
 ---
 
+
+Entry 00X — [date] — Raw vs. normalized entropy comparison
+Checked whether dividing H by ln(256) per DoF changes the S_t success/failure
+separation on task 4/7 failure-rich episodes. Result: [same shape, just rescaled /
+changes relative ordering because DoF X has narrower entropy range than DoF Y].
+Decision: [use raw / switch to normalized] for the composite signal going forward.
+Plot: St_raw_vs_normalized.png
