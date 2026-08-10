@@ -10,7 +10,7 @@ Reads the per-episode .npz files produced by step_4_entropy_logger.py and:
 Nothing here touches the robot or the model. Pure post-hoc analysis.
 
 >>> PLACEHOLDERS YOU MUST FILL (see notes at bottom):
-    DOF_WEIGHTS_BETA, WINDOW_SIZE, TRIGGER_Z_THRESHOLD,  (WINDOW_SIZE ISNT 50 ITS selected by a fucntion find_best_window_size)
+    DOF_WEIGHTS_BETA, WINDOW_SIZE,  (WINDOW_SIZE ISNT 50 ITS selected by a fucntion find_best_window_size)
     COLD_START_MEAN, COLD_START_STD are decided using a chosedn window - dynamic 
     , MIN_HISTORY_BEFORE_TRUSTING_BUFFER
 """
@@ -29,9 +29,6 @@ DOF_WEIGHTS_BETA = np.array([1.0, 2.6, 10.0, 1.0, 1.0, 1.0, 10.0])  # Tang Table
 
 # Window length for the trailing max-pool. Plan says 50–90. Pick one to start.
 WINDOW_SIZE = 50                                   # PLACEHOLDER — try 50, 70, 90
-
-# z-score trigger threshold k: how many std-devs above recent normal fires a trigger.
-TRIGGER_Z_THRESHOLD = 2.0                          # PLACEHOLDER — tune on the plots
 
 # Cold-start stats: used before the buffer has MIN_HISTORY samples. Compute these
 # from a held-out calibration set once you have data; 0/1 is a temporary stand-in.
@@ -184,7 +181,7 @@ def first_trigger_step(fired_mask):
     idx = np.argmax(fired_mask) if fired_mask.any() else None
     return idx
 
-def compare_entropy_vs_perplexity_timing(episodes, window_size, cold_start_mean, cold_start_std):
+def compare_entropy_vs_perplexity_timing(episodes, window_size, cold_start_mean, cold_start_std, trigger_threshold):
     """
     Reproduces Karli et al.'s Fig. 4 analysis on YOUR data: for each FAILED episode,
     find the first entropy-trigger step and the first perplexity-trigger step, and
@@ -293,7 +290,7 @@ def main():
         episodes, calibration_task_ids=[0], window_size=chosen_window)
     print("=== Stage 1: SW only (uniform beta, no ATR) ===")
     compute_auroc(episodes, chosen_window)   # with DOF_WEIGHTS_BETA = ones, no ATR
-    compare_entropy_vs_perplexity_timing(episodes, chosen_window, COLD_START_MEAN, COLD_START_STD) # for each FAILED episode,find the first entropy-trigger step and the first perplexity-trigger step
+    compare_entropy_vs_perplexity_timing(episodes, chosen_window, COLD_START_MEAN, COLD_START_STD, 2.0) # threshold = 2.0 just for this part,  for each FAILED episode,find the first entropy-trigger step and the first perplexity-trigger step
    
     for TRIGGER_Z_THRESHOLD in [1.5, 2.0, 2.5, 3.0]:
         precision_recall_at_k(episodes, chosen_window, COLD_START_MEAN, COLD_START_STD, TRIGGER_Z_THRESHOLD)
