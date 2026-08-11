@@ -51,10 +51,28 @@ def compute_auroc(episodes, window_size):
         u_t = collapse_entropy_to_scalar(ep['entropy_per_step'])
         S_t = compute_signal_St(u_t, window_size)
         labels.append(0 if ep['success'] else 1)
-        scores.append(S_t.max())
+        scores.append(S_t.mean())
     auroc = roc_auc_score(labels, scores)
     print(f"AUROC (failure prediction, window={window_size}): {auroc:.3f}   "
           f"[Tang Spatial reference: 0.936]")
+    return auroc
+
+def compute_auroc_perplexity(episodes, window_size):
+    """
+    Same as compute_auroc, but scores episodes by perplexity instead of entropy.
+    Lets you directly compare: which metric better predicts failure on OUR data --
+    the question Karli et al. left unquantified.
+    """
+    labels, scores = [], []
+    for ep in episodes:
+        if ep['num_steps'] == 0:
+            continue
+        u_t_ppl = compute_perplexity_scalar(ep['perplexity_per_step'])
+        S_t_ppl = compute_signal_St(u_t_ppl, window_size)
+        labels.append(0 if ep['success'] else 1)
+        scores.append(S_t_ppl.mean())          # match whichever scoring you settled on for entropy
+    auroc = roc_auc_score(labels, scores)
+    print(f"AUROC (failure prediction via PERPLEXITY, window={window_size}): {auroc:.3f}")
     return auroc
 
 def collapse_entropy_to_scalar(entropy_per_step):
@@ -176,6 +194,27 @@ def plot_normalized_vs_raw(episodes, save_dir, window_size):
     plt.savefig(out_path, dpi=150)
     print(f"saved comparison plot to {out_path}")
 
+def plot_St_perplexity(episodes, save_dir, window_size):
+    """
+    Same as the entropy S_t plot, but for perplexity. Compare visually against
+    St_success_vs_failure.png -- does perplexity separate the colors more cleanly?
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+    for ep in episodes:
+        if ep['num_steps'] == 0:
+            continue
+        u_t_ppl = compute_perplexity_scalar(ep['perplexity_per_step'])
+        S_t_ppl = compute_signal_St(u_t_ppl, window_size)
+        color = 'green' if ep['success'] else 'red'
+        ax.plot(S_t_ppl, color=color, alpha=0.3, linewidth=0.8)
+    ax.set_xlabel('timestep')
+    ax.set_ylabel('S_t (perplexity-based)')
+    ax.set_title('Perplexity S_t over time: green = success, red = failure')
+    plt.tight_layout()
+    out_path = os.path.join(save_dir, 'St_perplexity_success_vs_failure.png')
+    plt.savefig(out_path, dpi=150)
+    print(f"saved plot to {out_path}")
+
 def first_trigger_step(fired_mask):
     """Index of the first True in a boolean trigger array, or None if it never fires."""
     idx = np.argmax(fired_mask) if fired_mask.any() else None
@@ -219,28 +258,28 @@ def compare_entropy_vs_perplexity_timing(episodes, window_size, cold_start_mean,
     # quantified version of Karli's "perplexity anticipates failure" observation.
 
 
-def find_best_window_size(episodes, window_candidates=(50, 70, 90, 93, 100)):
+def find_best_window_size(episodes, window_candidates=(30, 50, 70, 90, 100)):
     """
-    Try each candidate window size, measure how well peak S_t separates
-    successful from failed episodes (mean peak S_t, failure minus success --
-    bigger gap = better separation). Prints results AND returns the window
-    with the largest gap, so the rest of the pipeline can use it.
+    Pick the window that best separates success from failure, measured by AUROC.
+    Uses S_t.mean() (not .max()) as the per-episode score, because the global max
+    is window-independent -- only the mean of the windowed signal actually changes
+    with window size.
     """
-    best_window, best_gap = None, -np.inf
+    best_window, best_auroc = None, -1.0
     for window_size in window_candidates:
-        peaks_success, peaks_failure = [], []
+        labels, scores = [], []
         for ep in episodes:
             if ep['num_steps'] == 0:
                 continue
             u_t = collapse_entropy_to_scalar(ep['entropy_per_step'])
             S_t = compute_signal_St(u_t, window_size)
-            (peaks_success if ep['success'] else peaks_failure).append(S_t.max())
-        gap = np.mean(peaks_failure) - np.mean(peaks_success)
-        print(f"window={window_size:3d}  success_peak={np.mean(peaks_success):.3f}  "
-              f"failure_peak={np.mean(peaks_failure):.3f}  gap={gap:.3f}")
-        if gap > best_gap:
-            best_gap, best_window = gap, window_size
-    print(f">>> best window: {best_window} (gap={best_gap:.3f})")
+            labels.append(0 if ep['success'] else 1)   # 1 = failure (positive class)
+            scores.append(S_t.mean())
+        auroc = roc_auc_score(labels, scores)
+        print(f"window={window_size:3d}  AUROC={auroc:.3f}")
+        if auroc > best_auroc:
+            best_auroc, best_window = auroc, window_size
+    print(f">>> best window: {best_window} (AUROC={best_auroc:.3f})")
     return best_window
 
 def compute_calibration_stats(episodes, calibration_task_ids, window_size):
@@ -264,6 +303,35 @@ def compute_calibration_stats(episodes, calibration_task_ids, window_size):
           f"mean={mean:.3f}  std={std:.3f}  (from {len(calibration_S_t_values)} steps)")
     return mean, std
 
+def compute_calibration_stats_perplexity(episodes, calibration_task_ids, window_size):
+    calibration_values = []
+    for ep in episodes:
+        if ep['task_id'] not in calibration_task_ids or not ep['success']:
+            continue
+        u_t_ppl = compute_perplexity_scalar(ep['perplexity_per_step'])
+        S_t_ppl = compute_signal_St(u_t_ppl, window_size)
+        calibration_values.extend(S_t_ppl.tolist())
+    mean, std = np.mean(calibration_values), np.std(calibration_values)
+    print(f"[PPL] calibration: mean={mean:.3f}  std={std:.3f}")
+    return mean, std
+
+def precision_recall_at_k_perplexity(episodes, window_size, cold_mean, cold_std, trigger_threshold):
+    true_pos = false_pos = false_neg = 0
+    for ep in episodes:
+        if ep['num_steps'] == 0:
+            continue
+        u_t_ppl = compute_perplexity_scalar(ep['perplexity_per_step'])
+        S_t_ppl = compute_signal_St(u_t_ppl, window_size)
+        fired = zscore_trigger_over_episode(S_t_ppl, cold_mean, cold_std, trigger_threshold).any()
+        failed = not ep['success']
+        if fired and failed:       true_pos  += 1
+        elif fired and not failed: false_pos += 1
+        elif not fired and failed: false_neg += 1
+    precision = true_pos / (true_pos + false_pos + 1e-9)
+    recall    = true_pos / (true_pos + false_neg + 1e-9)
+    print(f"[PPL] threshold={trigger_threshold:.1f}  precision={precision:.3f}  recall={recall:.3f}")
+    return precision, recall
+
 def precision_recall_at_k(episodes, window_size, cold_mean, cold_std, trigger_threshold):
     true_pos = false_pos = false_neg = 0
     for ep in episodes:
@@ -281,19 +349,57 @@ def precision_recall_at_k(episodes, window_size, cold_mean, cold_std, trigger_th
     print(f"threshold={trigger_threshold:.1f}  precision={precision:.3f}  recall={recall:.3f}")
     return precision, recall
 
+def show_trigger_values(episodes, window_size, cold_mean, cold_std, trigger_threshold, metric='entropy', n_examples=10):
+    """
+    For failed episodes where the trigger fired, print the actual S_t value and
+    z-score at the moment it fired -- not just whether/when, but WHAT VALUE.
+    """
+    shown = 0
+    for ep in episodes:
+        if ep['success'] or ep['num_steps'] == 0:
+            continue
+        if metric == 'entropy':
+            u_t = collapse_entropy_to_scalar(ep['entropy_per_step'])
+        else:
+            u_t = compute_perplexity_scalar(ep['perplexity_per_step'])
+        S_t = compute_signal_St(u_t, window_size)
+        fired = zscore_trigger_over_episode(S_t, cold_mean, cold_std, trigger_threshold)
+        step = first_trigger_step(fired)
+        if step is not None:
+            zscore_at_trigger = (S_t[step] - cold_mean) / (cold_std + 1e-8)
+            print(f"[{metric}] task={ep['task_id']} ep={ep['episode_index']}  "
+                  f"fired at step {step}/{ep['num_steps']}  S_t={S_t[step]:.3f}  "
+                  f"z-score={zscore_at_trigger:.2f}")
+            shown += 1
+            if shown >= n_examples:
+                break
+
 def main():
     episodes = load_all_episodes()
     print(f"loaded {len(episodes)} episodes")
     
     chosen_window = find_best_window_size(episodes) 
+    print(f" ===== chosen window is: {chosen_window}  =======")
     COLD_START_MEAN, COLD_START_STD = compute_calibration_stats(
         episodes, calibration_task_ids=[0], window_size=chosen_window)
+    COLD_START_MEAN_PPL, COLD_START_STD_PPL = compute_calibration_stats_perplexity(
+        episodes, calibration_task_ids=[0], window_size=chosen_window)
+
+
     print("=== Stage 1: SW only (uniform beta, no ATR) ===")
-    compute_auroc(episodes, chosen_window)   # with DOF_WEIGHTS_BETA = ones, no ATR
+    entropy_auroc = compute_auroc(episodes, chosen_window)   # with DOF_WEIGHTS_BETA = ones, no ATR
+    perplexity_auroc = compute_auroc_perplexity(episodes, chosen_window)
+    print(f">>> entropy AUROC={entropy_auroc:.3f} vs perplexity AUROC={perplexity_auroc:.3f}")
+
     compare_entropy_vs_perplexity_timing(episodes, chosen_window, COLD_START_MEAN, COLD_START_STD, 2.0) # threshold = 2.0 just for this part,  for each FAILED episode,find the first entropy-trigger step and the first perplexity-trigger step
-   
-    for TRIGGER_Z_THRESHOLD in [1.5, 2.0, 2.5, 3.0]:
+    plot_St_perplexity(episodes, DATA_DIR, chosen_window)
+    print("--- entropy trigger values (k=2.0) ---")
+    show_trigger_values(episodes, chosen_window, COLD_START_MEAN, COLD_START_STD, 2.0, metric='entropy')
+    print("--- perplexity trigger values (k=2.0) ---")
+    show_trigger_values(episodes, chosen_window, COLD_START_MEAN_PPL, COLD_START_STD_PPL, 2.0, metric='perplexity')
+    for TRIGGER_Z_THRESHOLD in [1.0, 1.5, 2.0, 2.5, 3.0, 3.5]:
         precision_recall_at_k(episodes, chosen_window, COLD_START_MEAN, COLD_START_STD, TRIGGER_Z_THRESHOLD)
+        precision_recall_at_k_perplexity(episodes, chosen_window, COLD_START_MEAN_PPL, COLD_START_STD_PPL, TRIGGER_Z_THRESHOLD)
     # --- plot S_t for successful vs failed episodes (the Stage-4 deliverable) ---
     fig, ax = plt.subplots(figsize=(10, 6))
     for ep in episodes:
