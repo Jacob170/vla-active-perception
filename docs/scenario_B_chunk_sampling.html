@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scenario B — ε-pose semantic entropy, the actual loop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EDF1F4; --panel:#F7F9FB; --ink:#16283D; --ink-soft:#5A6B7D;
+  --rule:#C3CEDA; --rule-hair:#DCE4EB;
+  --sample:#0E7C86; --cluster:#B8620E; --measure:#6B3FA0; --warn:#A8232B; --act:#1F6B3B;
+  --display:'Space Grotesk','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--display);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:920px;margin:0 auto;padding:48px 28px 96px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--sample);font-weight:600;display:flex;gap:12px;align-items:center}
+.eyebrow::after{content:"";flex:1;height:1px;background:var(--sample);opacity:.35}
+h1{font-size:clamp(30px,5vw,46px);line-height:1.05;font-weight:700;letter-spacing:-.025em;margin:18px 0 10px}
+.verdict{font-size:19px;color:var(--ink-soft);max-width:64ch;margin:0 0 8px}
+.verdict strong{color:var(--sample);font-weight:600}
+h2{font-size:13px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;font-weight:600;
+  color:var(--ink-soft);margin:56px 0 18px;padding-bottom:9px;border-bottom:1px solid var(--rule)}
+h3{font-size:17px;font-weight:600;letter-spacing:-.01em;margin:30px 0 8px}
+p{max-width:66ch}
+.fig{background:var(--panel);border:1px solid var(--rule);border-radius:3px;padding:24px 20px;margin:22px 0}
+.fig svg{display:block;width:100%;height:auto}
+figcaption{font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);
+  margin-top:16px;padding-top:12px;border-top:1px solid var(--rule-hair)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;margin:16px 0}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--rule-hair);vertical-align:top}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-soft);border-bottom:1px solid var(--rule);font-weight:600}
+td.k{font-family:var(--mono);white-space:nowrap;font-weight:500}
+.sym{font-family:var(--mono);font-weight:600;padding:1px 5px;border-radius:2px}
+.s-samp{color:var(--sample);background:rgba(14,124,134,.09)}
+.s-clus{color:var(--cluster);background:rgba(184,98,14,.09)}
+.s-meas{color:var(--measure);background:rgba(107,63,160,.09)}
+.s-act{color:var(--act);background:rgba(31,107,59,.09)}
+.s-warn{color:var(--warn);background:rgba(168,35,43,.09)}
+.formula{font-family:var(--mono);font-size:15px;background:#fff;border:1px solid var(--rule);
+  border-left:3px solid var(--measure);padding:15px 18px;margin:14px 0;border-radius:2px;overflow-x:auto}
+.formula.samp{border-left-color:var(--sample)}
+.formula.clus{border-left-color:var(--cluster)}
+.formula .lbl{display:block;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-soft);margin-bottom:7px;font-weight:600}
+.formula .note{display:block;font-family:var(--display);font-size:13px;color:var(--ink-soft);margin-top:9px;line-height:1.45}
+.steps{counter-reset:st;list-style:none;padding:0;margin:20px 0}
+.steps li{counter-increment:st;position:relative;padding:12px 0 12px 52px;border-bottom:1px solid var(--rule-hair)}
+.steps li::before{content:counter(st,decimal-leading-zero);position:absolute;left:0;top:12px;
+  font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink-soft);
+  border:1px solid var(--rule);border-radius:2px;padding:2px 7px;background:#fff}
+.steps b{display:block;font-weight:600;font-size:15.5px}
+.steps span.d{color:var(--ink-soft);font-size:14px}
+.cost{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}
+.cost div{background:#fff;border:1px solid var(--rule);border-radius:2px;padding:14px}
+.cost .lab{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+.cost .big{font-family:var(--mono);font-size:24px;font-weight:600;margin-top:5px}
+.cost .sub{font-size:12.5px;color:var(--ink-soft);margin-top:3px}
+.callout{border-left:3px solid var(--measure);background:rgba(107,63,160,.05);
+  padding:15px 18px;margin:22px 0;border-radius:0 2px 2px 0}
+.callout.warn{border-left-color:var(--warn);background:rgba(168,35,43,.05)}
+.callout p{margin:0;max-width:none;font-size:15px}
+.callout p+p{margin-top:9px}
+.ref{font-family:var(--mono);font-size:11.5px;color:var(--measure);
+  background:rgba(107,63,160,.08);padding:2px 7px;border-radius:2px;white-space:nowrap}
+.foot{margin-top:64px;padding-top:20px;border-top:1px solid var(--rule);
+  font-family:var(--mono);font-size:11.5px;color:var(--ink-soft)}
+@media(max-width:620px){.cost{grid-template-columns:1fr}.wrap{padding:32px 18px 64px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="eyebrow">Scenario B · Algorithm §8.3</div>
+<h1>ε-pose semantic entropy<br>at the current step</h1>
+<p class="verdict">N action chunks sampled from one observation, integrated to terminal poses, clustered by outcome, then entropy over cluster fractions. <strong>11 forward passes per reading</strong> — one shared backbone encode plus N cheap action-expert passes.</p>
+
+<h2>The inner cycle — one entropy reading</h2>
+<figure class="fig">
+<svg viewBox="0 0 860 620" role="img" aria-label="Scenario B flow: sample N chunks, integrate poses, cluster, compute entropy, aggregate, act, loop">
+<defs>
+  <marker id="g" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#5A6B7D"/></marker>
+  <marker id="s" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#0E7C86"/></marker>
+  <marker id="c" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#B8620E"/></marker>
+  <marker id="k" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#1F6B3B"/></marker>
+</defs>
+<style>
+ .bx{fill:#fff;stroke:#C3CEDA;stroke-width:1.2}
+ .bs{fill:rgba(14,124,134,.06);stroke:#0E7C86;stroke-width:1.3}
+ .bc{fill:rgba(184,98,14,.06);stroke:#B8620E;stroke-width:1.3}
+ .bm{fill:rgba(107,63,160,.06);stroke:#6B3FA0;stroke-width:1.3}
+ .ba{fill:rgba(31,107,59,.06);stroke:#1F6B3B;stroke-width:1.3}
+ .tl{font-family:'Space Grotesk',sans-serif;font-size:13px;fill:#16283D;font-weight:500}
+ .tm{font-family:'IBM Plex Mono',monospace;font-size:10.5px;fill:#5A6B7D}
+ .tn{font-family:'IBM Plex Mono',monospace;font-size:10px;fill:#5A6B7D;letter-spacing:.1em}
+ .ts{font-family:'IBM Plex Mono',monospace;font-size:10.5px;fill:#0E7C86;font-weight:600}
+ .tc{font-family:'IBM Plex Mono',monospace;font-size:10.5px;fill:#B8620E;font-weight:600}
+ .tk{font-family:'IBM Plex Mono',monospace;font-size:11px;fill:#1F6B3B;font-weight:600}
+ .ln{stroke:#5A6B7D;stroke-width:1.2;fill:none;marker-end:url(#g)}
+ .ls{stroke:#0E7C86;stroke-width:1.2;fill:none;marker-end:url(#s)}
+ .lc{stroke:#B8620E;stroke-width:1.2;fill:none;marker-end:url(#c)}
+ .lk{stroke:#1F6B3B;stroke-width:1.6;fill:none;marker-end:url(#k);stroke-dasharray:6 4}
+</style>
+
+<text x="10" y="22" class="tn">01</text>
+<rect x="38" y="8" width="215" height="38" rx="2" class="bx"/>
+<text x="52" y="25" class="tl">Observe o</text><text x="118" y="28" class="tm">t</text>
+<text x="52" y="39" class="tm">agentview + wrist + state</text>
+<path class="ln" d="M145,48 L145,68"/>
+
+<text x="10" y="86" class="tn">02</text>
+<rect x="38" y="70" width="215" height="40" rx="2" class="bs"/>
+<text x="52" y="87" class="tl">Encode backbone — ONCE</text>
+<text x="52" y="101" class="ts">1 forward pass · shared by all N</text>
+<path class="ls" d="M145,112 L145,132"/>
+
+<text x="10" y="152" class="tn">03</text>
+<rect x="38" y="136" width="470" height="112" rx="2" class="bs"/>
+<text x="52" y="154" class="tl">Sample N chunks — flow ODE, N independent noise seeds</text>
+<text x="52" y="169" class="tm">each: 10 Euler steps → one A ∈ ℝ(H×7), H=10 future timesteps</text>
+<g>
+  <rect x="54" y="180" width="74" height="30" rx="2" class="bx"/><text x="62" y="199" class="ts">A⁽¹⁾ 10×7</text>
+  <rect x="136" y="180" width="74" height="30" rx="2" class="bx"/><text x="144" y="199" class="ts">A⁽²⁾ 10×7</text>
+  <rect x="218" y="180" width="74" height="30" rx="2" class="bx"/><text x="226" y="199" class="ts">A⁽³⁾ 10×7</text>
+  <text x="302" y="199" class="tm">· · ·</text>
+  <rect x="332" y="180" width="74" height="30" rx="2" class="bx"/><text x="340" y="199" class="ts">A⁽ᴺ⁾ 10×7</text>
+</g>
+<text x="52" y="232" class="ts">N = 10 action-expert passes (the cheap side of §6's asymmetry)</text>
+<path class="ls" d="M273,250 L273,272"/>
+
+<text x="10" y="292" class="tn">04</text>
+<rect x="38" y="276" width="470" height="56" rx="2" class="bc"/>
+<text x="52" y="294" class="tl">Pose-integrate each chunk → terminal pose</text>
+<text x="52" y="309" class="tm">position: running SUM · orientation: COMPOSE on SO(3) · gripper: last value</text>
+<text x="52" y="324" class="tc">A⁽ⁱ⁾ → (p, R, g)  — not FK, not IK: task-space delta accumulation</text>
+<path class="lc" d="M273,334 L273,356"/>
+
+<text x="10" y="376" class="tn">05</text>
+<rect x="38" y="360" width="470" height="80" rx="2" class="bc"/>
+<text x="52" y="378" class="tl">Greedy cluster by behavioural distance</text>
+<text x="52" y="393" class="tm">for each A⁽ⁱ⁾: join first cluster with d(A⁽ⁱ⁾, rep) ≤ ε, else open a new one</text>
+<g>
+  <circle cx="64" cy="415" r="5" fill="#B8620E"/><circle cx="78" cy="415" r="5" fill="#B8620E"/>
+  <circle cx="92" cy="415" r="5" fill="#B8620E"/><circle cx="106" cy="415" r="5" fill="#B8620E"/>
+  <circle cx="120" cy="415" r="5" fill="#B8620E"/><circle cx="134" cy="415" r="5" fill="#B8620E"/>
+  <text x="148" y="419" class="tc">n₁ = 6 → same grasp</text>
+  <circle cx="290" cy="415" r="5" fill="#6B3FA0"/><circle cx="304" cy="415" r="5" fill="#6B3FA0"/>
+  <circle cx="318" cy="415" r="5" fill="#6B3FA0"/><circle cx="332" cy="415" r="5" fill="#6B3FA0"/>
+  <text x="346" y="419" class="tc">n₂ = 4 → different grasp</text>
+</g>
+<path class="lc" d="M273,442 L273,464"/>
+
+<text x="10" y="484" class="tn">06</text>
+<rect x="38" y="468" width="470" height="66" rx="2" class="bm"/>
+<text x="52" y="486" class="tl">Count → probabilities → entropy</text>
+<text x="52" y="503" class="tm">p̂₁ = 6/10 = 0.6 · p̂₂ = 4/10 = 0.4</text>
+<text x="52" y="521" class="tm">SE = −(0.6 ln 0.6 + 0.4 ln 0.4) = 0.673 nats · + Miller–Madow (Ĉ−1)/(2N)</text>
+<path class="ln" d="M273,536 L273,556"/>
+
+<text x="10" y="576" class="tn">07</text>
+<rect x="38" y="560" width="215" height="46" rx="2" class="ba"/>
+<text x="52" y="578" class="tl">Aggregate → threshold → act</text>
+<text x="52" y="594" class="tm">ATR gate · z-score · max-pool (§11)</text>
+
+<path class="lk" d="M258,583 C620,583 660,26 262,26"/>
+<text x="530" y="330" class="tk">K loop — advance to t+1</text>
+<text x="530" y="348" class="tm">execute chunk prefix, re-observe,</text>
+<text x="530" y="363" class="tm">repeat the whole cycle</text>
+<text x="530" y="386" class="tk">K = 125 readings per episode</text>
+<text x="530" y="404" class="tk">125 × 11 = 1,375 passes</text>
+
+<rect x="528" y="140" width="300" height="108" rx="2" class="bx"/>
+<text x="542" y="160" class="tl">Two loops, don't conflate them</text>
+<text x="542" y="180" class="ts">N = 10</text><text x="600" y="180" class="tm">samples INSIDE one reading</text>
+<text x="542" y="199" class="tk">K = 125</text><text x="600" y="199" class="tm">readings ACROSS the episode</text>
+<text x="542" y="222" class="tm">N is the inner fan-out (step 03).</text>
+<text x="542" y="238" class="tm">K is the outer green loop.</text>
+</svg>
+<figcaption>Fig. B — One full cycle produces a single SE<sub>t</sub>. The green dashed loop is K: the same cycle repeats once per control step. N is the inner fan-out at step 03 and never leaves that step.</figcaption>
+</figure>
+
+<h2>Cost</h2>
+<div class="cost">
+  <div><div class="lab">Per SE reading</div><div class="big" style="color:var(--sample)">11</div><div class="sub">1 backbone + N=10 action-expert</div></div>
+  <div><div class="lab">Per episode · every step</div><div class="big" style="color:var(--sample)">1,375</div><div class="sub">K=125 readings × 11</div></div>
+  <div><div class="lab">Per episode · chunk boundary</div><div class="big" style="color:var(--act)">275</div><div class="sub">Scenario C, below — K drops to 25</div></div>
+</div>
+
+<h2>Steps, in order</h2>
+<ol class="steps">
+<li><b>Observe</b><span class="d">o<sub>t</sub> = agentview image + wrist image + proprioceptive state. Both cameras always on — confirmed in <code>libero_policy.py</code>.</span></li>
+<li><b>Encode the backbone once</b><span class="d">1 forward pass. §6: “the expensive part runs once, the cheap part runs N times.” This asymmetry is what makes the method affordable.</span></li>
+<li><b>Sample N chunks</b><span class="d">N independent noise seeds through the flow ODE, ~10 Euler steps each. Output: N tensors of shape (H, 7) = (10, 7). Batch these.</span></li>
+<li><b>Pose-integrate each chunk</b><span class="d">Accumulate the 10 deltas into one terminal pose. Position sums; orientation composes on SO(3); gripper takes the last value.</span></li>
+<li><b>Cluster greedily</b><span class="d">Compare each chunk to one representative per existing cluster. Join if d ≤ ε, else open a new cluster. Order-dependent — fix and report the seed.</span></li>
+<li><b>Count and measure</b><span class="d">p̂<sub>c</sub> = n<sub>c</sub>/N, then Shannon entropy over the cluster distribution. Apply Miller–Madow.</span></li>
+<li><b>Aggregate, threshold, act</b><span class="d">Feed SE<sub>t</sub> into Layer 2 (§11), threshold it, execute the chosen chunk prefix, advance to t+1.</span></li>
+</ol>
+
+<h2>Where each calculation happens</h2>
+
+<div class="formula samp">
+<span class="lbl">Step 04 · pose integration — position</span>
+<span class="sym s-clus">p</span><sub>term</sub> = <span class="sym s-clus">p</span><sub>0</sub> + Σ<sub>h=1..H</sub> Δ<span class="sym s-clus">p</span><sub>h</sub>
+<span class="note">A plain running sum. p<sub>0</sub> is the current end-effector position, known from proprioception — no kinematics needed to obtain it.</span>
+</div>
+
+<div class="formula samp">
+<span class="lbl">Step 04 · pose integration — orientation</span>
+<span class="sym s-clus">R</span><sub>term</sub> = Δ<span class="sym s-clus">R</span><sub>H</sub> ∘ … ∘ Δ<span class="sym s-clus">R</span><sub>2</sub> ∘ Δ<span class="sym s-clus">R</span><sub>1</sub> ∘ <span class="sym s-clus">R</span><sub>0</sub>
+<span class="note">Rotations do <em>not</em> add — they compose. SO(3) is curved, so this is matrix or quaternion multiplication applied in sequence, not a sum.</span>
+</div>
+
+<div class="formula clus">
+<span class="lbl">Step 05 · behavioural distance — §8.2</span>
+d(<span class="sym s-samp">A</span>,<span class="sym s-samp">B</span>) = ‖<span class="sym s-clus">p</span><sub>A</sub> − <span class="sym s-clus">p</span><sub>B</sub>‖₂ &nbsp;+&nbsp; <span class="sym s-clus">λ<sub>R</sub></span> · d<sub>geo</sub>(<span class="sym s-clus">R</span><sub>A</sub>, <span class="sym s-clus">R</span><sub>B</sub>) &nbsp;+&nbsp; <span class="sym s-clus">λ<sub>g</sub></span> · |<span class="sym s-clus">g</span><sub>A</sub> − <span class="sym s-clus">g</span><sub>B</sub>|
+<span class="note">metres + λ<sub>R</sub>·radians + λ<sub>g</sub>·binary. The units are incommensurable until λ<sub>R</sub> and λ<sub>g</sub> are calibrated — §8.2 requires λ<sub>g</sub> large enough that gripper disagreement always forces separate clusters.</span>
+</div>
+
+<div class="formula clus">
+<span class="lbl">Step 05 · cluster assignment rule</span>
+join cluster c &nbsp;⟺&nbsp; d(<span class="sym s-samp">A</span><sup>(i)</sup>, rep(c)) ≤ <span class="sym s-clus">ε</span>
+<span class="note">One comparison per existing cluster, not all pairs: O(N·|C|), mirroring Farquhar's greedy sequential clustering exactly.</span>
+</div>
+
+<div class="formula">
+<span class="lbl">Step 06 · discrete estimator — §3.3 step 3b</span>
+p̂(c | x) = <span class="sym s-meas">n<sub>c</sub></span> / <span class="sym s-samp">N</span>
+<span class="note">Pure counting. No likelihoods anywhere — which is exactly why this is the only estimator available for flow matching (§4, §7).</span>
+</div>
+
+<div class="formula">
+<span class="lbl">Step 06 · semantic entropy — §3.3 step 4</span>
+<span class="sym s-meas">SE<sub>t</sub></span> = − Σ<sub>c ∈ 𝒞</sub> p̂<sub>c</sub> · ln p̂<sub>c</sub>
+<span class="note">Standard Shannon entropy, applied to the distribution over <em>outcome clusters</em> instead of raw outputs. That substitution is the whole method. Ceiling: SE ≤ ln N.</span>
+</div>
+
+<div class="formula">
+<span class="lbl">Step 06 · bias correction — §9</span>
+Ĥ<sub>MM</sub> = Ĥ<sub>plug-in</sub> + (<span class="sym s-clus">Ĉ</span> − 1) / (2<span class="sym s-samp">N</span>)
+<span class="note">The plug-in estimator is biased downward by roughly −(Ĉ−1)/(2N). Costs nothing to correct. <b>Ĉ renamed from the MD file's K̂</b> — see the collision note below.</span>
+</div>
+
+<div class="formula" style="border-left-color:var(--act)">
+<span class="lbl">Step 07 · Layer-2 aggregation — §11</span>
+<span class="sym s-act">S<sub>t</sub></span> = max<sub>w ∈ 𝒲</sub> pool<sub>w</sub>[ z( (1 + λ · ATR<sub>t</sub>) · <span class="sym s-meas">SE<sub>t</sub></span> ) ]
+<span class="note">ATR gate and max-pool survive the swap from token entropy unchanged. The β-weighted DoF sum disappears — SE is already a scalar. z-scoring becomes mandatory, since SE has a different scale and a hard ln N ceiling.</span>
+</div>
+
+<h2>Scenario C — trigger at chunk boundaries</h2>
+<p>The chunk prefix actually executed is shorter than the chunk predicted. openpi's LIBERO example uses <code>replan_steps = 5</code>: predict H=10, execute 5, re-predict. If SE is computed only when a new chunk is generated rather than at every environment step, K drops by that factor.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 840 190" role="img" aria-label="Scenario C: entropy computed only at chunk boundaries">
+<style>
+ .bx2{fill:#fff;stroke:#C3CEDA;stroke-width:1.2}
+ .bk{fill:rgba(31,107,59,.08);stroke:#1F6B3B;stroke-width:1.3}
+ .t2{font-family:'IBM Plex Mono',monospace;font-size:10.5px;fill:#5A6B7D}
+ .t3{font-family:'IBM Plex Mono',monospace;font-size:11px;fill:#1F6B3B;font-weight:600}
+ .tl2{font-family:'Space Grotesk',sans-serif;font-size:13px;fill:#16283D;font-weight:500}
+</style>
+<text x="14" y="22" class="tl2">Every step (Scenario B) — K = 125 readings</text>
+<g>
+  <rect x="14" y="34" width="30" height="24" rx="2" class="bk"/>
+  <rect x="48" y="34" width="30" height="24" rx="2" class="bk"/>
+  <rect x="82" y="34" width="30" height="24" rx="2" class="bk"/>
+  <rect x="116" y="34" width="30" height="24" rx="2" class="bk"/>
+  <rect x="150" y="34" width="30" height="24" rx="2" class="bk"/>
+  <rect x="184" y="34" width="30" height="24" rx="2" class="bk"/>
+  <rect x="218" y="34" width="30" height="24" rx="2" class="bk"/>
+  <rect x="252" y="34" width="30" height="24" rx="2" class="bk"/>
+  <rect x="286" y="34" width="30" height="24" rx="2" class="bk"/>
+  <rect x="320" y="34" width="30" height="24" rx="2" class="bk"/>
+  <text x="360" y="51" class="t2">· · · every green box = one full 11-pass SE reading</text>
+</g>
+<text x="14" y="86" class="t3">125 readings × 11 = 1,375 passes / episode</text>
+
+<text x="14" y="120" class="tl2">Chunk boundary only (Scenario C) — K = 25 readings</text>
+<g>
+  <rect x="14" y="132" width="30" height="24" rx="2" class="bk"/>
+  <rect x="48" y="132" width="30" height="24" rx="2" class="bx2"/>
+  <rect x="82" y="132" width="30" height="24" rx="2" class="bx2"/>
+  <rect x="116" y="132" width="30" height="24" rx="2" class="bx2"/>
+  <rect x="150" y="132" width="30" height="24" rx="2" class="bx2"/>
+  <rect x="184" y="132" width="30" height="24" rx="2" class="bk"/>
+  <rect x="218" y="132" width="30" height="24" rx="2" class="bx2"/>
+  <rect x="252" y="132" width="30" height="24" rx="2" class="bx2"/>
+  <rect x="286" y="132" width="30" height="24" rx="2" class="bx2"/>
+  <rect x="320" y="132" width="30" height="24" rx="2" class="bx2"/>
+  <text x="360" y="149" class="t2">white = executed from the existing chunk, no new SE reading</text>
+</g>
+<text x="14" y="184" class="t3">25 readings × 11 = 275 passes / episode — 5× cheaper than B</text>
+</svg>
+<figcaption>Fig. C — Same inner cycle, fired less often. §13 attack #5 argues this is “arguably the correct granularity anyway, since a chunk is the unit of behavior.”</figcaption>
+</figure>
+
+<h2>Variable legend</h2>
+<table>
+<tr><th>Symbol</th><th>Reads as</th><th>What it is</th><th>Set to</th></tr>
+<tr><td class="k"><span class="sym s-samp">N</span></td><td>“N”</td><td>Chunks sampled per entropy reading — the inner fan-out</td><td class="k">10 → sweep 10/20/50/100</td></tr>
+<tr><td class="k"><span class="sym s-samp">H</span></td><td>“H”</td><td>Action-chunk horizon: future timesteps per chunk</td><td class="k">10</td></tr>
+<tr><td class="k"><span class="sym s-act">K</span></td><td>“K”</td><td>Outer loop: entropy readings per episode</td><td class="k">125 (B) / 25 (C)</td></tr>
+<tr><td class="k"><span class="sym s-samp">o<sub>t</sub></span></td><td>“o sub t”</td><td>Observation at step t: two camera images + state</td><td class="k">—</td></tr>
+<tr><td class="k"><span class="sym s-samp">A<sup>(i)</sup></span></td><td>“A superscript i”</td><td>i-th sampled action chunk, shape (H, 7)</td><td class="k">(10, 7)</td></tr>
+<tr><td class="k"><span class="sym s-clus">p</span></td><td>“p”</td><td>Terminal end-effector position after integrating the chunk</td><td class="k">ℝ³, metres</td></tr>
+<tr><td class="k"><span class="sym s-clus">R</span></td><td>“R”</td><td>Terminal end-effector orientation</td><td class="k">SO(3), radians</td></tr>
+<tr><td class="k"><span class="sym s-clus">g</span></td><td>“g”</td><td>Terminal gripper command</td><td class="k">open / closed</td></tr>
+<tr><td class="k"><span class="sym s-clus">d<sub>geo</sub></span></td><td>“d geo”</td><td>Geodesic distance on SO(3) — angle between two orientations</td><td class="k">radians</td></tr>
+<tr><td class="k"><span class="sym s-clus">ε</span></td><td>“epsilon”</td><td>Clustering threshold: below this, two chunks mean the same thing</td><td class="k">sweep 2 orders of magnitude</td></tr>
+<tr><td class="k"><span class="sym s-clus">λ<sub>R</sub></span></td><td>“lambda R”</td><td>Weight converting rotation error into position-comparable units</td><td class="k">to calibrate</td></tr>
+<tr><td class="k"><span class="sym s-clus">λ<sub>g</sub></span></td><td>“lambda g”</td><td>Gripper weight — must dominate, per §8.2</td><td class="k">large</td></tr>
+<tr><td class="k"><span class="sym s-meas">c</span>, <span class="sym s-meas">𝒞</span></td><td>“c”, “script C”</td><td>One outcome cluster; the set of all clusters found</td><td class="k">—</td></tr>
+<tr><td class="k"><span class="sym s-meas">n<sub>c</sub></span></td><td>“n sub c”</td><td>How many of the N samples landed in cluster c</td><td class="k">integer</td></tr>
+<tr><td class="k"><span class="sym s-meas">p̂<sub>c</sub></span></td><td>“p-hat sub c”</td><td>Empirical class probability, n<sub>c</sub>/N</td><td class="k">—</td></tr>
+<tr><td class="k"><span class="sym s-clus">Ĉ</span></td><td>“C-hat”</td><td>Number of clusters actually observed — for Miller–Madow</td><td class="k">grows with N</td></tr>
+<tr><td class="k"><span class="sym s-meas">SE<sub>t</sub></span></td><td>“S E sub t”</td><td>Semantic entropy at step t</td><td class="k">nats, ≤ ln N</td></tr>
+<tr><td class="k"><span class="sym s-act">S<sub>t</sub></span></td><td>“S sub t”</td><td>Layer-2 aggregated composite signal</td><td class="k">z-scored</td></tr>
+<tr><td class="k"><span class="sym s-act">ATR<sub>t</sub></span></td><td>“A T R”</td><td>Average true range over action history — architecture-agnostic gate</td><td class="k">ε≈0.02 floor</td></tr>
+</table>
+
+<div class="callout warn">
+<p><b>Two different K’s — fix before writing up.</b> §9 uses <span class="sym s-warn">K̂</span> for the number of observed clusters in the Miller–Madow term. This document uses <span class="sym s-act">K</span> for the control-step loop count, and the perturbation paper (arXiv 2606.20754) uses <span class="sym s-warn">K</span> for <em>its</em> sample count — the role your <span class="sym s-samp">N</span> plays. Three meanings, one letter.</p>
+<p>Recommended: cluster count → <span class="sym s-clus">Ĉ</span>, sample count stays <span class="sym s-samp">N</span>, loop count stays <span class="sym s-act">K</span>. Applied throughout this document already.</p>
+</div>
+
+<h2>Cross-references — semantic_entropy_for_vla.md</h2>
+<table>
+<tr><th>Section</th><th>Maps to</th></tr>
+<tr><td class="k"><span class="ref">§3.3 step 1</span></td><td>Sample — step 03 here. i.i.d. draws from the same conditional; temperature/seed must be fixed and reported.</td></tr>
+<tr><td class="k"><span class="ref">§3.3 step 3b</span></td><td>Discrete estimator p̂ = n<sub>c</sub>/N — step 06. The only estimator available for flow matching.</td></tr>
+<tr><td class="k"><span class="ref">§3.3 step 4</span></td><td>Entropy over classes — step 06.</td></tr>
+<tr><td class="k"><span class="ref">§4</span></td><td>Estimator comparison table. Likelihood-based is unavailable here; discrete is the only column that works.</td></tr>
+<tr><td class="k"><span class="ref">§6</span></td><td>Backbone-once / expert-N-times asymmetry — why step 02 and step 03 have different costs.</td></tr>
+<tr><td class="k"><span class="ref">§7</span></td><td>Why π₀ gives samples but not likelihoods. The reason step 06 counts instead of summing probabilities.</td></tr>
+<tr><td class="k"><span class="ref">§8.2</span></td><td>Behavioural distance d(A,B) — step 05. Terminal pose, not full path. λ<sub>g</sub> must dominate.</td></tr>
+<tr><td class="k"><span class="ref">§8.3</span></td><td>The algorithm this whole document renders. Lines 4–10 are step 05.</td></tr>
+<tr><td class="k"><span class="ref">§8.4</span></td><td>Why clustering is an aleatoric filter — the reason step 05 exists at all rather than raw variance.</td></tr>
+<tr><td class="k"><span class="ref">§9</span></td><td>Sample count and Miller–Madow. N=10 is the floor of the recommended sweep, not the answer.</td></tr>
+<tr><td class="k"><span class="ref">§11</span></td><td>Layer-2 aggregation — step 07. ATR and max-pool survive; β-weighted DoF sum does not.</td></tr>
+<tr><td class="k"><span class="ref">§13 #1</span></td><td>ε is a free parameter. Mandatory sweep across two orders of magnitude; needs a plateau.</td></tr>
+<tr><td class="k"><span class="ref">§13 #5</span></td><td>Compute budget — Scenario C is the fallback this attack names.</td></tr>
+<tr><td class="k"><span class="ref">§14 #5</span></td><td>Open: time N=50 batched flow rollouts. Everything here is pass-counts, not wall-clock.</td></tr>
+</table>
+
+<div class="callout">
+<p><b>One design choice this diagram does not yet make.</b> The perturbation paper reuses the same noise tensor at every timestep, deliberately, so each perturbed variant stays temporally consistent across a rollout. This flow resamples fresh seeds at every reading. If temporal consistency of samples turns out to matter for stable clustering, that is a decision to make on purpose — currently unaddressed in the MD file.</p>
+</div>
+
+<div class="foot">
+Companion document: <b>Scenario A — N full rollouts</b>, the 114× more expensive reading.<br>
+Pass counts are exact arithmetic from N=10, H=10, K=125, replan=5. Wall-clock timing is unmeasured — §14 action #5.
+</div>
+
+</div>
+</body>
+</html>

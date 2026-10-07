@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scenario A — N full rollouts (the expensive reading)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EDF1F4; --panel:#F7F9FB; --ink:#16283D; --ink-soft:#5A6B7D;
+  --rule:#C3CEDA; --rule-hair:#DCE4EB;
+  --sample:#0E7C86; --cluster:#B8620E; --measure:#6B3FA0; --warn:#A8232B;
+  --display:'Space Grotesk','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--display); font-size:16px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:920px;margin:0 auto;padding:48px 28px 96px}
+.eyebrow{
+  font-family:var(--mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--warn); font-weight:600; display:flex; gap:12px; align-items:center;
+}
+.eyebrow::after{content:"";flex:1;height:1px;background:var(--warn);opacity:.35}
+h1{
+  font-size:clamp(30px,5vw,46px); line-height:1.05; font-weight:700;
+  letter-spacing:-.025em; margin:18px 0 10px;
+}
+.verdict{
+  font-size:19px; color:var(--ink-soft); max-width:62ch; margin:0 0 8px;
+}
+.verdict strong{color:var(--warn);font-weight:600}
+h2{
+  font-size:13px; font-family:var(--mono); letter-spacing:.14em; text-transform:uppercase;
+  font-weight:600; color:var(--ink-soft); margin:56px 0 18px;
+  padding-bottom:9px; border-bottom:1px solid var(--rule);
+}
+h3{font-size:17px;font-weight:600;letter-spacing:-.01em;margin:28px 0 8px}
+p{max-width:66ch}
+.fig{
+  background:var(--panel); border:1px solid var(--rule); border-radius:3px;
+  padding:24px 20px; margin:22px 0;
+}
+.fig svg{display:block;width:100%;height:auto}
+figcaption{
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-soft);
+  margin-top:16px; padding-top:12px; border-top:1px solid var(--rule-hair);
+}
+/* dot-field cost meter */
+.meter{margin:26px 0}
+.meter-head{
+  display:flex;justify-content:space-between;align-items:baseline;
+  font-family:var(--mono);font-size:12px;margin-bottom:8px;
+}
+.meter-head b{font-size:15px;font-weight:600}
+.dots{
+  line-height:0; font-size:0; border:1px solid var(--rule); background:#fff;
+  padding:7px; border-radius:2px;
+}
+.dots i{display:inline-block;width:3px;height:3px;margin:1px;border-radius:50%}
+.dots.warn i{background:var(--warn);opacity:.5}
+.dots.ok i{background:var(--sample);width:5px;height:5px;margin:2px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;margin:16px 0}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--rule-hair);vertical-align:top}
+th{
+  font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-soft);border-bottom:1px solid var(--rule);font-weight:600;
+}
+td.k{font-family:var(--mono);white-space:nowrap;font-weight:500}
+.sym{font-family:var(--mono);font-weight:600;padding:1px 5px;border-radius:2px}
+.s-samp{color:var(--sample);background:rgba(14,124,134,.09)}
+.s-clus{color:var(--cluster);background:rgba(184,98,14,.09)}
+.s-meas{color:var(--measure);background:rgba(107,63,160,.09)}
+.s-warn{color:var(--warn);background:rgba(168,35,43,.09)}
+.formula{
+  font-family:var(--mono);font-size:15px;background:#fff;border:1px solid var(--rule);
+  border-left:3px solid var(--measure);padding:15px 18px;margin:14px 0;border-radius:2px;
+  overflow-x:auto;
+}
+.formula .lbl{
+  display:block;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-soft);margin-bottom:7px;font-weight:600;
+}
+.callout{
+  border-left:3px solid var(--warn);background:rgba(168,35,43,.05);
+  padding:15px 18px;margin:22px 0;border-radius:0 2px 2px 0;
+}
+.callout p{margin:0;max-width:none;font-size:15px}
+.ref{
+  font-family:var(--mono);font-size:11.5px;color:var(--measure);
+  background:rgba(107,63,160,.08);padding:2px 7px;border-radius:2px;white-space:nowrap;
+}
+.foot{margin-top:64px;padding-top:20px;border-top:1px solid var(--rule);
+  font-family:var(--mono);font-size:11.5px;color:var(--ink-soft)}
+@media(max-width:560px){.wrap{padding:32px 18px 64px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="eyebrow">Scenario A · rejected reading</div>
+<h1>N full rollouts to task completion</h1>
+<p class="verdict">This is the reading of <span class="sym s-warn">A ∈ ℝ<sup>H×7</sup></span> where “trajectory” means the whole episode from start to task end. It costs <strong>114× more than the actual method</strong> for the same N — and it is not what Algorithm §8.3 describes. Kept here so the distinction stays explicit.</p>
+
+<h2>Flow</h2>
+<figure class="fig">
+<svg viewBox="0 0 840 470" role="img" aria-label="Scenario A flow: N full episode rollouts, clustered once">
+  <defs>
+    <marker id="aA" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 z" fill="#5A6B7D"/></marker>
+    <marker id="aW" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 z" fill="#A8232B"/></marker>
+  </defs>
+  <style>
+    .bx{fill:#fff;stroke:#C3CEDA;stroke-width:1.2}
+    .bw{fill:rgba(168,35,43,.055);stroke:#A8232B;stroke-width:1.4}
+    .tl{font-family:'Space Grotesk',sans-serif;font-size:13.5px;fill:#16283D;font-weight:500}
+    .tm{font-family:'IBM Plex Mono',monospace;font-size:11px;fill:#5A6B7D}
+    .tn{font-family:'IBM Plex Mono',monospace;font-size:10px;fill:#5A6B7D;letter-spacing:.1em}
+    .tw{font-family:'IBM Plex Mono',monospace;font-size:11.5px;fill:#A8232B;font-weight:600}
+    .ln{stroke:#5A6B7D;stroke-width:1.2;fill:none;marker-end:url(#aA)}
+    .lw{stroke:#A8232B;stroke-width:1.4;fill:none;marker-end:url(#aW);stroke-dasharray:5 3}
+  </style>
+
+  <text x="16" y="20" class="tn">01</text>
+  <rect x="42" y="6" width="180" height="40" rx="2" class="bx"/>
+  <text x="56" y="24" class="tl">Observation o</text><text x="145" y="27" class="tm">t</text>
+  <text x="56" y="39" class="tm">agentview + wrist + state</text>
+  <path class="ln" d="M132,48 L132,74"/>
+
+  <text x="16" y="100" class="tn">02</text>
+  <rect x="42" y="78" width="620" height="150" rx="2" class="bw"/>
+  <text x="58" y="100" class="tl">Roll out ONE complete episode, o</text>
+  <text x="270" y="103" class="tm">t</text>
+  <text x="277" y="100" class="tl">→ task end</text>
+  <text x="58" y="119" class="tm">every step needs its own full forward pass — no reuse</text>
+
+  <g>
+    <rect x="58" y="132" width="46" height="26" rx="2" class="bx"/>
+    <text x="70" y="149" class="tm">step 1</text>
+    <path class="ln" d="M106,145 L124,145"/>
+    <rect x="126" y="132" width="46" height="26" rx="2" class="bx"/>
+    <text x="138" y="149" class="tm">step 2</text>
+    <path class="ln" d="M174,145 L192,145"/>
+    <text x="200" y="149" class="tm">· · ·</text>
+    <path class="ln" d="M228,145 L246,145"/>
+    <rect x="248" y="132" width="62" height="26" rx="2" class="bx"/>
+    <text x="256" y="149" class="tm">step 125</text>
+  </g>
+  <text x="58" y="180" class="tw">= 125 forward passes for ONE rollout</text>
+
+  <path class="lw" d="M330,190 C420,190 420,120 348,120"/>
+  <text x="360" y="176" class="tw">repeat × N = 10 independent rollouts</text>
+  <text x="58" y="205" class="tw">= 10 × 125 = 1,250 forward passes</text>
+  <text x="58" y="221" class="tm">…all of this to produce ONE entropy reading</text>
+
+  <path class="ln" d="M352,230 L352,258"/>
+
+  <text x="16" y="282" class="tn">03</text>
+  <rect x="42" y="262" width="290" height="52" rx="2" class="bx"/>
+  <text x="56" y="282" class="tl">Cluster the 10 finished episodes</text>
+  <text x="56" y="300" class="tm">by the final outcome each one reached</text>
+  <path class="ln" d="M187,316 L187,342"/>
+
+  <text x="16" y="366" class="tn">04</text>
+  <rect x="42" y="346" width="290" height="52" rx="2" class="bx"/>
+  <text x="56" y="366" class="tl">One SE value</text>
+  <text x="56" y="384" class="tm">for the single timestep t you started from</text>
+
+  <path class="lw" d="M340,372 C470,372 470,26 232,26"/>
+  <text x="356" y="352" class="tw">…then advance to t+1 and do it all again × K</text>
+  <text x="356" y="368" class="tm">K = 125 control steps per episode</text>
+  <text x="356" y="392" class="tw">125 × 1,250 = 156,250 passes / episode</text>
+</svg>
+<figcaption>Fig. A — Every entropy reading requires N complete task attempts. The outer K loop then repeats the whole structure once per control step.</figcaption>
+</figure>
+
+<h2>Cost ledger</h2>
+
+<div class="meter">
+  <div class="meter-head"><span>Scenario A — forward passes per <em>one</em> SE reading</span><b style="color:var(--warn)">1,250</b></div>
+  <div class="dots warn" id="dotsA"></div>
+</div>
+<div class="meter">
+  <div class="meter-head"><span>Scenario B — forward passes per <em>one</em> SE reading</span><b style="color:var(--sample)">11</b></div>
+  <div class="dots ok" id="dotsB"></div>
+</div>
+
+<table>
+<tr><th>Quantity</th><th>Scenario A</th><th>Scenario B (actual)</th></tr>
+<tr><td class="k">Passes / SE reading</td><td class="k" style="color:var(--warn)">1,250</td><td class="k" style="color:var(--sample)">11</td></tr>
+<tr><td class="k">Passes / episode (K=125)</td><td class="k" style="color:var(--warn)">156,250</td><td class="k" style="color:var(--sample)">1,375</td></tr>
+<tr><td class="k">Ratio</td><td class="k" colspan="2" style="color:var(--warn)">A is 114× more expensive</td></tr>
+</table>
+
+<div class="callout">
+<p><b>Why this reading is wrong, precisely.</b> §8.3 line 2 reads <em>“Sample N action chunks A⁽¹⁾…A⁽ᴺ⁾ by running the flow ODE from N independent noise seeds.”</em> One flow-ODE pass produces one <span class="sym s-samp">A ∈ ℝ<sup>H×7</sup></span> — H future timesteps of a <em>chunk</em>, not an episode played to completion. Nothing in the algorithm executes those actions in the environment before clustering.</p>
+</div>
+
+<h2>Where the confusion enters</h2>
+<p>Both readings involve “N trajectories.” The difference is whether a trajectory is <span class="sym s-samp">H = 10</span> predicted future timesteps from a single forward pass, or <span class="sym s-warn">~125</span> executed environment steps. The MD file uses the first meaning throughout; the word “trajectory” in casual speech suggests the second.</p>
+
+<div class="formula">
+<span class="lbl">Scenario A cost</span>
+passes = N × steps_per_episode × K &nbsp;=&nbsp; 10 × 125 × 125 &nbsp;=&nbsp; <span style="color:var(--warn)">156,250</span>
+</div>
+<div class="formula" style="border-left-color:var(--sample)">
+<span class="lbl">Scenario B cost (see companion document)</span>
+passes = (1 + N) × K &nbsp;=&nbsp; (1 + 10) × 125 &nbsp;=&nbsp; <span style="color:var(--sample)">1,375</span>
+</div>
+
+<h2>Variable legend</h2>
+<table>
+<tr><th>Symbol</th><th>Reads as</th><th>Meaning here</th><th>Value used</th></tr>
+<tr><td class="k"><span class="sym s-samp">N</span></td><td>“N”</td><td>Samples drawn per entropy reading</td><td class="k">10</td></tr>
+<tr><td class="k"><span class="sym s-samp">H</span></td><td>“H”</td><td>Action-chunk horizon — future timesteps per chunk</td><td class="k">10</td></tr>
+<tr><td class="k"><span class="sym s-warn">K</span></td><td>“K”</td><td>Outer loop: control steps per episode</td><td class="k">125</td></tr>
+<tr><td class="k"><span class="sym s-samp">o<sub>t</sub></span></td><td>“o sub t”</td><td>Observation at control step t</td><td class="k">—</td></tr>
+<tr><td class="k"><span class="sym s-samp">A<sup>(i)</sup></span></td><td>“A superscript i”</td><td>i-th sampled action chunk, shape (H, 7)</td><td class="k">(10, 7)</td></tr>
+<tr><td class="k"><span class="sym s-meas">SE<sub>t</sub></span></td><td>“S E sub t”</td><td>Semantic entropy at step t, in nats</td><td class="k">—</td></tr>
+</table>
+
+<div class="callout" style="border-left-color:var(--measure);background:rgba(107,63,160,.05)">
+<p><b>Naming collision to fix in the MD file.</b> §9 uses <span class="sym s-meas">K̂</span> for <em>number of clusters observed</em>, in the Miller–Madow term <span class="sym s-meas">(K̂−1)/(2N)</span>. This document uses <span class="sym s-warn">K</span> for <em>control-step loop count</em>. Two different K’s. Recommend renaming the cluster count to <span class="sym s-clus">Ĉ</span> throughout §9 before writing up.</p>
+</div>
+
+<h2>Cross-references — semantic_entropy_for_vla.md</h2>
+<table>
+<tr><th>Section</th><th>What it establishes</th></tr>
+<tr><td class="k"><span class="ref">§8.3</span></td><td>The algorithm this scenario misreads. Lines 1–2 define sampling as N flow-ODE passes at one observation.</td></tr>
+<tr><td class="k"><span class="ref">§6</span></td><td>Why the backbone runs once and the action expert runs N times — the asymmetry Scenario A throws away.</td></tr>
+<tr><td class="k"><span class="ref">§13 #5</span></td><td>“Your compute budget does not close.” The reviewer attack this scenario would trigger immediately.</td></tr>
+<tr><td class="k"><span class="ref">§14 #5</span></td><td>Open action: time N=50 batched flow rollouts. Still unmeasured — all counts here are pass-counts, not wall-clock.</td></tr>
+</table>
+
+<div class="foot">
+Companion document: <b>Scenario B — chunk sampling at the current step</b> (the actual method, plus the chunk-boundary variant).<br>
+Pass counts are exact arithmetic from N=10, H=10, K=125 (baseline episode-mean T = 124.7). Wall-clock timing is not established.
+</div>
+
+</div>
+<script>
+(function(){
+  var a=document.getElementById('dotsA'), b=document.getElementById('dotsB');
+  // 1250 dots at 1:10 scale = 125 rendered, labelled honestly
+  var f1=document.createDocumentFragment();
+  for(var i=0;i<125;i++){f1.appendChild(document.createElement('i'));}
+  a.appendChild(f1);
+  a.insertAdjacentHTML('afterend','<div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);margin-top:5px">each dot = 10 forward passes</div>');
+  var f2=document.createDocumentFragment();
+  for(var j=0;j<11;j++){f2.appendChild(document.createElement('i'));}
+  b.appendChild(f2);
+  b.insertAdjacentHTML('afterend','<div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);margin-top:5px">each dot = 1 forward pass</div>');
+})();
+</script>
+</body>
+</html>

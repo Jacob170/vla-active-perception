@@ -1,1 +1,5 @@
-runs/\nvideos/\n*.npz\n*.mp4\n__pycache__/
+runs/
+videos/
+*.npz
+*.mp4
+__pycache__/
