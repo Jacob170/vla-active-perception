@@ -2,7 +2,7 @@
 """Pre-registered comparison classic (in-distribution) vs PRO-swap, successes only. See PLAN_triple_he.md.
 
 Question: does SE rise because of the perturbation itself, even when the robot succeeds?
-Leg A (primary, tasks 0,2,5,8): classic successes vs PRO successes, within task.
+Leg A (primary, tasks 0,2,8): classic successes vs PRO successes, within task. Sensitivity adds task 5 (classic 9/10).
 Leg B (descriptive, tasks 3,6,7,9): classic successes vs PRO failures.
 t1, t4 (descriptive, NOT independent of the earlier 40-pair test): three cells.
 
@@ -17,8 +17,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import se_lib as L
 
-LEG_A = (0, 2, 5, 8)
-LEG_A_SENS = (0, 2, 8)
+LEG_A = (0, 2, 8)                    # Jacob's choice 2026-11-10 01:35, before any run: only tasks 10/10 in BOTH runs
+LEG_A_SENS = (0, 2, 5, 8)            # sensitivity: adds task 5 (classic 9/10)
 LEG_B = (3, 6, 7, 9)
 THREE_CELL = (1, 4)
 K_MIN = 30
@@ -153,7 +153,7 @@ def mean_curve(series):
 
 def plot(E, K, H, out):
     fig, axes = plt.subplots(2, 4, figsize=(22, 9), dpi=100)
-    for r, tasks in enumerate((LEG_A, LEG_B)):
+    for r, tasks in enumerate((LEG_A_SENS, LEG_B)):          # row 0 shows 0,2,5,8 (5 = sensitivity only)
         for c, t in enumerate(tasks):
             ax = axes[r, c]
             groups = (("classic success", "classic", True, "#1b7f4c", "-"),
@@ -166,7 +166,7 @@ def plot(E, K, H, out):
                     ax.plot(np.arange(len(mu)), mu, color=col, ls=ls, lw=2, label=f"{lab} (n={len(ser)})")
             ax.axvline(K, color="#555", ls="--", lw=1)
             ax.axhline(L.SE_CEIL, color="#999", ls=":", lw=1)
-            ax.set_title(f"task {t} ({'leg A' if r == 0 else 'leg B'})", fontsize=10)
+            ax.set_title(f"task {t} ({('leg A' if t in LEG_A else 'leg A sensitivity') if r == 0 else 'leg B'})", fontsize=10)
             ax.set_xlabel("reading (episode step)")
             if c == 0:
                 ax.set_ylabel("SE (nats)")
@@ -247,6 +247,7 @@ def main():
         A_s = leg(cells(E, LEG_A_SENS, ok, ok, key))
         _, p_s, _ = perm_test(cells(E, LEG_A_SENS, ok, ok, key))
         A_s["perm_p_two_sided"] = p_s
+        A_s["positive_tasks"] = int(sum(1 for v in A_s["per_task"].values() if v["d"] is not None and v["d"] > 0))
         B = leg(cells(E, LEG_B, ok, fail, key))
         B["gap_B_minus_gap_A"] = B["pooled_d_pro_minus_classic"] - A["pooled_d_pro_minus_classic"]
         three = {}
@@ -259,20 +260,20 @@ def main():
                              "proS_minus_classic": (m(pS) - m(cS)) if len(pS) and len(cS) else None,
                              "proF_minus_proS": (m(pF) - m(pS)) if len(pF) and len(pS) else None,
                              "proF_minus_classic": (m(pF) - m(cS)) if len(pF) and len(cS) else None}
-        res["legs"][f"H{H}"] = {"legA": A, "legA_sensitivity_0_2_8": A_s, "legB_descriptive": B,
+        res["legs"][f"H{H}"] = {"legA": A, "legA_sensitivity_0_2_5_8": A_s, "legB_descriptive": B,
                                 "three_cell_t1_t4_descriptive_NOT_independent_of_40_pair_test": three}
 
     # verdict (locked): primary = H10 leg A
     A = res["legs"]["H10"]["legA"]
     sd = A["within_group_sd"]
-    if A["perm_p_two_sided"] < 0.05 and A["positive_tasks"] >= 3:
+    if A["perm_p_two_sided"] < 0.05 and A["positive_tasks"] == len(LEG_A):
         verdict = "SHIFT"
     elif sd and A["ci95"][1] < SD_BOUND * sd:
         verdict = "NO DETECTABLE SHIFT, BOUNDED"
     else:
         verdict = "INCONCLUSIVE"
     res["verdict"] = verdict
-    res["rule"] = ("SHIFT if two-sided stratified permutation p < 0.05 AND d_t > 0 in >= 3 of 4 leg-A tasks (H10); "
+    res["rule"] = ("SHIFT if two-sided stratified permutation p < 0.05 AND d_t > 0 in all 3 leg-A tasks 0,2,8 (H10); "
                    "NO DETECTABLE SHIFT, BOUNDED if the CI95 of the pooled d lies below +0.5 pooled within-group SD; "
                    "else INCONCLUSIVE. Fixed 2026-11-10 before any run on real data.")
     L.write_json(os.path.join(a.out, "triple_results.json"), res)
@@ -286,12 +287,12 @@ def main():
         print(f"leg A (tasks {LEG_A}, classic S vs PRO S): pooled d = {A['pooled_d_pro_minus_classic']:+.4f} "
               f"CI95 [{A['ci95'][0]:+.4f}, {A['ci95'][1]:+.4f}], p = {A['perm_p_two_sided']:.4f}, "
               f"effect {A['effect_size_sd']:+.2f} SD (within-group SD {A['within_group_sd']:.4f}), "
-              f"positive in {A['positive_tasks']}/4 tasks")
+              f"positive in {A['positive_tasks']}/{len(LEG_A)} tasks")
         for t, v in A["per_task"].items():
             print(f"   task {t}: classic {v['mean_classic']:.4f} (n={v['n_classic']})  PRO {v['mean_pro']:.4f} (n={v['n_pro']})  "
                   f"d = {v['d']:+.4f} CI [{v['ci95'][0]:+.4f}, {v['ci95'][1]:+.4f}]")
-        S = res["legs"][f"H{H}"]["legA_sensitivity_0_2_8"]
-        print(f"sensitivity tasks {LEG_A_SENS}: d = {S['pooled_d_pro_minus_classic']:+.4f} CI95 [{S['ci95'][0]:+.4f}, {S['ci95'][1]:+.4f}] p = {S['perm_p_two_sided']:.4f}")
+        S = res["legs"][f"H{H}"]["legA_sensitivity_0_2_5_8"]
+        print(f"sensitivity tasks {LEG_A_SENS} (adds task 5, classic 9/10): d = {S['pooled_d_pro_minus_classic']:+.4f} CI95 [{S['ci95'][0]:+.4f}, {S['ci95'][1]:+.4f}] p = {S['perm_p_two_sided']:.4f}, positive in {S['positive_tasks']}/{len(LEG_A_SENS)}")
         print(f"leg B (tasks {LEG_B}, classic S vs PRO F, descriptive): pooled d = {B['pooled_d_pro_minus_classic']:+.4f} "
               f"CI95 [{B['ci95'][0]:+.4f}, {B['ci95'][1]:+.4f}]; gap_B - gap_A = {B['gap_B_minus_gap_A']:+.4f}")
         for t, v in B["per_task"].items():
